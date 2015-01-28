@@ -9,7 +9,6 @@
 
   <!-- include materials -->
   <xacro:include filename="$(find spur_description)/urdf/materials.urdf.xacro" />
-  <xacro:include filename="$(find spur_description)/urdf/spur.gazebo.xacro" />
 
   <!-- constants -->
   <property name="M_PI" value="3.1415926535897931" />
