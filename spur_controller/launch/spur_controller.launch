@@ -17,7 +17,7 @@
   <param name="robot_description" command="$(find xacro)/xacro.py $(arg model) visualize_laser:=$(arg visualize_laser)" />
 
   <!-- Fire up dynamixel -->
-  <include file="$(find spur_controller)/launch/spur_dynamixel.launch">
+  <include file="$(find spur_bringup)/launch/spur_dynamixel.launch">
     <arg name="sim" value="$(arg sim)" />
     <arg name="spur_controller_args" value="$(arg spur_controller_args)" />
     <!-- Debug Info -->
