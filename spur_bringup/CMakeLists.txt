@@ -6,6 +6,7 @@ project(spur_bringup)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   urg_node
+  rostest
 )
 
 ## System dependencies are found with CMake's conventions
@@ -159,3 +160,4 @@ install(DIRECTORY config launch
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+add_rostest(test/test-minimal.test)
