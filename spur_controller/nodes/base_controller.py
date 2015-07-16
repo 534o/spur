@@ -39,7 +39,7 @@ velocity to the base_controller and then plots the actual outputs.
 import argparse
 import time
 import numpy
-from math import atan2, hypot, fabs, pi
+from math import sin, cos, atan2, hypot, fabs, pi
 
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
@@ -106,27 +106,11 @@ class BaseController:
         @type sec_idle: float
         @param sec_idle: Ideling seconds before robot stops moving
         '''
-        control_interval = (rospy.Time.now() - self.last_control_time).to_sec()
-        self.last_control_time = rospy.Time.now()
+        current_time = rospy.Time.now()
+        control_interval = (current_time - self.last_control_time).to_sec()
+        self.last_control_time = current_time
 
-        v1 = translation_matrix((self.cmd.linear.x * control_interval, self.cmd.linear.y * control_interval, 0))
-        o  = self.odom.pose.pose.orientation
-        v2 = numpy.dot(quaternion_matrix([o.x, o.y, o.z, o.w]), v1)
-        self.odom.pose.pose.position.x += v2[0,3]
-        self.odom.pose.pose.position.y += v2[1,3]
-        q1 = quaternion_about_axis(self.cmd.angular.z*control_interval, (0, 0, 1))
-        o  = self.odom.pose.pose.orientation
-        q2 = quaternion_multiply([o.x, o.y, o.z, o.w], q1)
-        self.odom.pose.pose.orientation.x = q2[0]
-        self.odom.pose.pose.orientation.y = q2[1]
-        self.odom.pose.pose.orientation.z = q2[2]
-        self.odom.pose.pose.orientation.w = q2[3]
-        self.odom.twist.twist.linear.x = v2[0,3]
-        self.odom.twist.twist.linear.y = v2[1,3]
-        self.odom.twist.twist.angular.z += self.cmd.angular.z * control_interval
-        self.odom.header.stamp = rospy.Time.now()
-
-        if (rospy.Time.now() - self.last_cmd_time).to_sec() > sec_idle: ## if new cmd_vel did not comes for 5 sec
+        if (current_time - self.last_cmd_time).to_sec() > sec_idle: ## if new cmd_vel did not comes for 5 sec
             self.last_cmd_msg = Twist()
 
         velocity_limit = 0.001
@@ -134,6 +118,20 @@ class BaseController:
         self.cmd.linear.y += max(min(self.last_cmd_msg.linear.y - self.cmd.linear.y, velocity_limit), -velocity_limit)
         self.cmd.angular.z += max(min(self.last_cmd_msg.angular.z - self.cmd.angular.z, velocity_limit), -velocity_limit)
         rospy.logdebug("cmd_vel %f %f %f" % (self.cmd.linear.x, self.cmd.linear.y, self.cmd.angular.z))
+
+        self.odom.twist.twist.linear.x  += (self.cmd.linear.x * cos(self.odom.twist.twist.angular.z) - self.cmd.linear.y * sin(self.odom.twist.twist.angular.z) )* control_interval
+        self.odom.twist.twist.linear.y  += (self.cmd.linear.x * sin(self.odom.twist.twist.angular.z) + self.cmd.linear.y * cos(self.odom.twist.twist.angular.z) )* control_interval
+        self.odom.twist.twist.angular.z += self.cmd.angular.z * control_interval
+        # odom to pose
+        self.odom.pose.pose.position.x = self.odom.twist.twist.linear.x
+        self.odom.pose.pose.position.y = self.odom.twist.twist.linear.y
+        q = quaternion_about_axis(self.odom.twist.twist.angular.z, (0, 0, 1))
+        self.odom.pose.pose.orientation.x = q[0]
+        self.odom.pose.pose.orientation.y = q[1]
+        self.odom.pose.pose.orientation.z = q[2]
+        self.odom.pose.pose.orientation.w = q[3]
+        #
+        self.odom.header.stamp = current_time
 
         diameter = 0.1  # caster diameter
         offset_x = 0.15  # caster offset
